@@ -3,6 +3,7 @@ from typing import List, Optional
 
 @dataclass
 class GroupDesc:
+    """Group description"""
     topic: str
     topic_id: str
     set_at: int
@@ -11,6 +12,7 @@ class GroupDesc:
 
 @dataclass
 class GroupSubject:
+    """Group subject"""
     name: str
     set_by: str
     set_at: int
@@ -18,6 +20,7 @@ class GroupSubject:
 
 @dataclass
 class GroupParticipant:
+    """Group participant"""
     lid: str
     jid: str
     is_admin: Optional[str]
@@ -26,6 +29,7 @@ class GroupParticipant:
 
 @dataclass
 class GroupMetadata:
+    """Group metadata class"""
     owner_jid: str
     jid: str
     desc: GroupDesc

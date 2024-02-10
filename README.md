@@ -15,11 +15,9 @@ Follow these steps to use the project:
    git clone https://github.com/rull05/AnvBOT
    ```
 
-2. Create a `.env` file in the project directory:
+2. Create a `.env` file in the project directory and set the following environment variable:
 
-   ```bash
-   BOT_NAME=botname
-   ```
+   `BOT_NAME=your_bot`
 
 3. Install the required dependencies using pip:
 
