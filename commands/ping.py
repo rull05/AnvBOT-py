@@ -8,16 +8,12 @@ from utils import MessageSerialize
 from src.command import CommandBase
 
 class Ping(CommandBase):
-    prefix: str = '$'
+    prefix: str = '!'
     pattern: str = 'ping'
     desc: str = 'Get system information'
 
-    def before(self, msg: MessageSerialize) -> bool:
-        msg.reply('Getting system information...')
-        return True
-
     def execute(self, msg: MessageSerialize):
-       return msg.reply(get_system_info())
+        msg.reply(get_system_info())
 
 
 def get_system_info():
@@ -31,7 +27,7 @@ def get_system_info():
     cpu = platform.processor()
     memory = psutil.virtual_memory()
     memory = f'{convert_bytes_to_gb(memory.used):.2f}GB / {convert_bytes_to_gb(memory.total):.2f}GB'
-    return f'`OS: {os_name} {uname.version}\nKernel: {kernel}\nUptime: {uptime}\nPackages: {packages} (dpkg)\nShell: {shell}\nTerminal: {terminal}\nCPU: {cpu}\nMemory: {memory}`'
+    return f'OS: {os_name} {uname.version}\nKernel: {kernel}\nUptime: {uptime}\nPackages: {packages} (dpkg)\nShell: {shell}\nTerminal: {terminal}\nCPU: {cpu}\nMemory: {memory}'
 
     
     

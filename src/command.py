@@ -2,7 +2,7 @@ import os
 import re
 import importlib
 import inspect
-from typing import List, TYPE_CHECKING
+from typing import List, TYPE_CHECKING, Optional
 from abc import ABC, abstractmethod
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -123,7 +123,7 @@ class CommandHandler:
         if msg.is_bot:
             return
 
-        for plugin in self._plugins:
+        for _, plugin in self._plugins:
             # check if plugin has implemented on_message method and not base class
             if is_method_overridden(CommandBase, plugin, 'on_message'):
                 plugin.on_message(msg)
@@ -166,12 +166,6 @@ class CommandHandler:
                     return
 
     def _validate(self, plugin: CommandBase, msg: MessageSerialize) -> None:
-        """
-        Validate the msg.
-
-        :param plugin: The plugin to validate.
-        :param msg: The message to validate.
-        """
         if plugin.owner_only and not msg.is_owner:
             return 'Hanya owner yang bisa menggunakan perintah ini.'
         if plugin.group_only and not msg.is_group:
@@ -185,31 +179,36 @@ class CommandHandler:
         return None
 
     def _load_all_plugin(self) -> None:
-        """
-        Loads the plugins from the specified directory.
-        """
         for file_name in os.listdir(self._dir):
             if file_name.endswith('.py'):
                 plugin_name: str = os.path.splitext(file_name)[0]
                 module_path: str = f"{self._dir}.{plugin_name}"
-                self._add_plugin(module_path)
+                self._add_plugin(module_path, plugin_name)
+                print('Loaded plugin', plugin_name)
 
-    def _add_plugin(self, module_path: str) -> None:
-        """
-        Add a plugin to the list of loaded plugins.
-
-        :param module_path: The module path of the plugin.
-        """
+    def _get_plugin(self, module) -> Optional[CommandBase]:
         try:
-            module = importlib.import_module(module_path)
             for attr_name in dir(module):
                 attr = getattr(module, attr_name)
-                if inspect.isclass(attr) and issubclass(attr, CommandBase) and attr != CommandBase:
-                    self._plugins.append(attr())
-                    print('Loaded plugin', attr.name)
+                if inspect.isclass(attr) and issubclass(attr, CommandBase) and attr != CommandBase:   
+                    return attr
                     break
         except Exception as e:
-            print('Failed to load plugin Exception: ', e)
+            raise e
+
+    def _append_plugin(self, module, command_cls: CommandBase) -> None:
+        _,plugin_name = module.__name__.split('.')
+        command_cls.set_attr('name', plugin_name)
+        self._plugins.append([module, command_cls()])
+
+
+    def _add_plugin(self, module_path: str, plugin_name: str) -> None:
+        try:
+            module = importlib.import_module(module_path)
+            command_cls: CommandBase = self._get_plugin(module)
+            self._append_plugin(module, command_cls)
+        except Exception as e:
+            print('Failed to load plugin:', e)
 
     def _plugin_observer(self, event: FileSystemEventHandler) -> None:
         """
@@ -222,17 +221,21 @@ class CommandHandler:
         module_path: str = f"{self._dir}.{plugin_name}"
         if event.event_type == 'deleted':
             for plugin in self._plugins:
-                if plugin.name == plugin_name:
+                module, cmd_cls = plugin
+                if cmd.name == plugin_name:
                     self._plugins.remove(plugin)
                     break
         if event.event_type == 'created':
-            self._add_plugin(module_path)
+            self._add_plugin(module_path, plugin_name)
         if event.event_type == 'modified':
             for plugin in self._plugins:
-                if plugin.name == plugin_name:
+                module, command_cls = plugin
+                if command_cls.name == plugin_name:
                     self._plugins.remove(plugin)
-                    self._add_plugin(plugin_name, module_path)
-                    print('Reloaded plugin', plugin.name)
+                    reload_mod = importlib.reload(module)
+                    command_cls = self._get_plugin(reload_mod)
+                    self._append_plugin(reload_mod, command_cls)
+                    print('Reloaded plugin', command_cls.name)
                     break
 
 
@@ -240,19 +243,8 @@ class ReloadHandler(FileSystemEventHandler):
     """
     Watchdog event handler for reloading plugins.
     """
-
     def __init__(self, reload_callback: callable) -> None:
-        """
-        Initialize the ReloadHandler.
-
-        :param reload_callback: The callback function to call when a file system event is triggered.
-        """
         self._reload_callback: callable = reload_callback
 
     def on_any_event(self, event: FileSystemEventHandler) -> None:
-        """
-        Handle any file system event.
-
-        :param event: The file system event.
-        """
         self._reload_callback(event)
