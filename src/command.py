@@ -39,9 +39,8 @@ def is_method_overridden(_cls, instance, method_name):
         return False
     func_method = getattr(instance, method_name)
     cls_method = getattr(_cls, method_name)
-    if func_method.__code__ is cls_method.__code__:
-        return False
-    return True
+    return func_method.__code__ is cls_method.__code__
+    
 
 
 class CommandBase(ABC):
